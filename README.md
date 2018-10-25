@@ -21,11 +21,17 @@ Build a map-based application, which lets the user see geo-based data on a map a
 Fill in (either in English, or in Slovak):
  
 **Application description**: Aplikácia by mala pomôcť šoférom alebo ľudom, ktorí si potrebujú načerpať palivo a nevedia, kde presne sa nachádza. Keďže dáta z druhého datasetu sú z Ameriky, budem sa zameriavať v projekte na Ameriku. Je možné vytvoriť viacero scenárov:
+
 -Nájsť najbližšiu benzínku
+
 -Benzínky v určitom okruhu
+
 -Aký druh karty benzínka akceptuje
+
 -Aké palivo je možné na benzínke natankovať
+
 -Aký druh nabíjania elektromotorov je možné na benzínke a aký charger používajú
+
 -Komu benzínka patrí
 
 **Data source**: Openstreetmap.com, API na tankovacie stanice: https://developer.nrel.gov/docs/transportation/alt-fuel-stations-v1/
