@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Display a map</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.51.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.51.0/mapbox-gl.css' rel='stylesheet' />
+</head>
+<body>                
+
+<div id='map'></div>
+<pre id='coordinates' class='coordinates'></pre>
+<div id='stations' class='stations'></div>
+
+<div class="menu">
+    <div class="item">
+        <h2 class="in-item">Filtrovanie</h2>
+    </div>
+    <div class="item">
+        <button class="nearest-gas in-item" type="button">10 najbližších benziniek</button>
+    </div>
+
+    <div class="item">
+        <button class="nearest-km-gas in-item" type="button">benzínky v okruhu 5km</button>
+    </div>
+
+    <div class="item">
+        <button class="all-data in-item" type="button">Všetky benzínky</button>
+    </div>
+    <div class="item">
+        <div class="in-item">
+            <input id="heat-map" class="heat-map" type="checkbox">Heatmapa<br><br>
+        </div>
+    </div>
+    <div class="item">
+        <div class="in-item">
+            <input id="gas-station-filter" class="gas-station-filter" type="checkbox" checked>Zobraz benzínky<br><br>
+            <input id="el-station-filter" class="el-station-filter" type="checkbox" checked>Zobraz elektro stanice<br><br>
+        </div>
+    </div>
+</div>
+    
+<script>
+mapboxgl.accessToken = '{{ACCESS_KEY}}';
+var groupedStations = JSON.parse('{{groupedStations|safe}}');
+stations.style.display = 'block';
+stations.innerHTML += '<h3>Počet čerpacích staníc v Colorade:</h3>'
+stations.innerHTML += groupedStations.type[0] + " : " + groupedStations.count[0];
+stations.innerHTML += '<br />' + groupedStations.type[1] + " : " + groupedStations.count[1];
+
+var map = new mapboxgl.Map({
+    container: 'map', 
+    style: 'mapbox://styles/mapbox/streets-v9', 
+    center: [-105.558522, 39.04], 
+    zoom: 7 // starting zoom
+});
+
+// geojson for dragable point
+var canvas = map.getCanvasContainer();
+var draggableGeoJSON = {
+    "type": "FeatureCollection",
+    "features": [{
+        "type": "Feature",
+        "geometry": {
+            "type": "Point",
+            "coordinates": [-105.558522, 39.04]
+        }
+    }]
+};
+
+
+map.on('load', function() {
+
+    // layer for cluster gas stations
+    map.addSource("gasStations", {
+        type: "geojson",
+        data: JSON.parse('{{gasStations|safe}}'),
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 50 
+    });
+
+    map.addSource("gasStationsHeatMap", {
+        type: "geojson",
+        data: JSON.parse('{{gasStations|safe}}'),
+    });
+
+    // clusters
+     map.addLayer({
+        id: "clusters",
+        type: "circle",
+        source: "gasStations",
+        filter: ["has", "point_count"],
+        paint: {
+            "circle-color": [
+                "step",
+                ["get", "point_count"],
+                "#51bbd6",
+                100,
+                "#f1f075",
+                750,
+                "#f28cb1"
+            ],
+            "circle-radius": [
+                "step",
+                ["get", "point_count"],
+                20,
+                100,
+                30,
+                750,
+                40
+            ]
+        }
+    });
+
+    //cluster count
+    map.addLayer({
+        id: "cluster-count",
+        type: "symbol",
+        source: "gasStations",
+        filter: ["has", "point_count"],
+        layout: {
+            "text-field": "{point_count_abbreviated}",
+            "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+            "text-size": 12
+        }
+    });
+
+    // unclusted fuel
+    map.loadImage('https://cdn.iconscout.com/icon/free/png-256/gas-station-fuel-petrol-pump-30512.png', function(error, image) {
+        if (error) throw error;
+        map.addImage('gas', image);
+        map.addLayer({
+            id: "gas-station",
+            type: "symbol",
+            source: "gasStations",
+            filter: ["==", "title", "fuel"],
+            // filter: ["!", ["has", "point_count"]],
+            layout: {
+                "icon-image": "gas",
+                "icon-size": 0.15
+            }
+        });
+    });
+
+     // unclusted el stations
+     map.loadImage('https://static.thenounproject.com/png/95629-200.png', function(error, image) {
+        if (error) throw error;
+        map.addImage('charging', image);
+        map.addLayer({
+            id: "charging-station",
+            type: "symbol",
+            source: "gasStations",
+            filter: ["==", "title", "charging_station"],
+            // filter: ["!", ["has", "point_count"]],
+            layout: {
+                "icon-image": "charging",
+                "icon-size": 0.15
+            }
+        });
+    });
+
+
+    // draggable
+    map.loadImage('https://static1.squarespace.com/static/5277a6d4e4b070cdcec2fcf1/t/555cdb7ae4b0a57ea1002acd/1432148859897/greenmarker.png', function(error, image) {
+        if (error) throw error;
+        map.addImage('start', image);
+        map.addLayer({
+            "id": "point",
+            "type": "symbol",
+            "source": {
+                "type": "geojson",
+                "data": draggableGeoJSON
+            },
+            "layout": {
+                "icon-image": "start",
+                "icon-size": 0.15
+            }
+        });
+    });
+    
+    map.addLayer({
+        "id": "earthquakes-heat",
+        "type": "heatmap",
+        "source": "gasStationsHeatMap",
+        "maxzoom": 9,
+        "paint": {
+            // Increase the heatmap weight based on frequency and property magnitude
+            "heatmap-weight": [
+                "interpolate",
+                ["linear"],
+                ["get", "mag"],
+                0, 0,
+                6, 1
+            ],
+            // Increase the heatmap color weight weight by zoom level
+            // heatmap-intensity is a multiplier on top of heatmap-weight
+            "heatmap-intensity": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                0, 1,
+                9, 3
+            ],
+            // Color ramp for heatmap.  Domain is 0 (low) to 1 (high).
+            // Begin color ramp at 0-stop with a 0-transparancy color
+            // to create a blur-like effect.
+            "heatmap-color": [
+                "interpolate",
+                ["linear"],
+                ["heatmap-density"],
+                0, "rgba(33,102,172,0)",
+                0.2, "rgb(103,169,207)",
+                0.4, "rgb(209,229,240)",
+                0.6, "rgb(253,219,199)",
+                0.8, "rgb(239,138,98)",
+                1, "rgb(178,24,43)"
+            ],
+            // Adjust the heatmap radius by zoom level
+            "heatmap-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                0, 2,
+                15, 30
+            ],
+            // Transition from heatmap to circle layer by zoom level
+            "heatmap-opacity": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                7, 1,
+                9, 1
+            ],
+        }
+    });
+    map.setLayoutProperty('earthquakes-heat', 'visibility', 'none');
+
+    map.on('mouseenter', 'point', function() {
+        //map.setPaintProperty('point', 'circle-color', '#FF0000');
+        canvas.style.cursor = 'move';
+    });
+
+    map.on('mouseleave', 'point', function() {
+        // map.setPaintProperty('point', 'circle-color', '##FF0000');
+        canvas.style.cursor = '';
+    });
+
+    map.on('mousedown', 'point', function(e) {
+        e.preventDefault();
+
+        canvas.style.cursor = 'grab';
+
+        map.on('mousemove', onMove);
+        map.once('mouseup', onUp);
+    });
+
+    map.on('touchstart', 'point', function(e) {
+        if (e.points.length !== 1) return;
+        e.preventDefault();
+
+        map.on('touchmove', onMove);
+        map.once('touchend', onUp);
+    });
+
+    //near 10 gas-station
+    $(function() {
+        $('.nearest-gas').click(function() {
+        
+            var data = {
+                'point_lat': draggableGeoJSON['features'][0]['geometry']['coordinates'][1],
+                'point_lon': draggableGeoJSON['features'][0]['geometry']['coordinates'][0]
+            }
+
+            $.ajax({
+                url: '/near10Gas',
+                data: data,
+                type: 'POST',
+
+                success: function(response) {
+                    var response = JSON.parse(response);
+                    map.getSource('gasStations').setData(response);
+
+                },
+                error: function(error) {
+                    console.log(error);
+                }
+            });
+        });
+     });
+
+    $(function() {
+        $('.nearest-km-gas').click(function() {
+        
+            var data = {
+                'point_lat': draggableGeoJSON['features'][0]['geometry']['coordinates'][1],
+                'point_lon': draggableGeoJSON['features'][0]['geometry']['coordinates'][0]
+            }
+
+            $.ajax({
+                url: '/near5km',
+                data: data,
+                type: 'POST',
+
+                success: function(response) {
+                    var response = JSON.parse(response);
+                    map.getSource('gasStations').setData(response);
+
+                },
+                error: function(error) {
+                    console.log(error);
+                }
+            });
+        });
+     });
+
+    $(function() {
+        $('.all-data').click(function() {
+            $.ajax({
+                url: '/allData',
+                type: 'GET',
+
+                success: function(response) {
+                    var response = JSON.parse(response);
+                    map.getSource('gasStations').setData(response);
+                    document.getElementById('gas-station-filter').checked = true;
+                    document.getElementById('el-station-filter').checked = true;
+                },
+                error: function(error) {
+                    console.log(error);
+                }
+            });
+        });
+     });
+
+    $(function() {
+        $('.heat-map').click(function() {
+            if(document.getElementById('heat-map').checked) {
+                map.setLayoutProperty('earthquakes-heat', 'visibility', 'visible');
+                map.setLayoutProperty('clusters', 'visibility', 'none');
+                map.setLayoutProperty('cluster-count', 'visibility', 'none');
+
+            } else {
+                map.setLayoutProperty('earthquakes-heat', 'visibility', 'none');
+                map.setLayoutProperty('clusters', 'visibility', 'visible');
+                map.setLayoutProperty('cluster-count', 'visibility', 'visible');
+            }
+        });
+    });
+
+    // filter on gas stations
+    $(function() {
+        $('.gas-station-filter').click(function() {
+            callFilter();
+        });
+    });
+
+    // filter on el stations
+    $(function() {
+        $('.el-station-filter').click(function() {
+            callFilter();
+        });
+    });
+});
+function callFilter() {
+    if((document.getElementById('gas-station-filter').checked) && (document.getElementById('el-station-filter').checked)) {
+        $.ajax({
+            url: '/allData',
+            type: 'GET',
+
+            success: function(response) {
+                var response = JSON.parse(response);
+                map.getSource('gasStations').setData(response);
+            },
+            error: function(error) {
+                console.log(error);
+            }
+        });
+    }
+    else if(document.getElementById('el-station-filter').checked) {
+        $.ajax({
+            url: '/elStations',
+            type: 'GET',
+
+            success: function(response) {
+                var response = JSON.parse(response);
+                map.getSource('gasStations').setData(response);
+            },
+            error: function(error) {
+                console.log(error);
+            }
+        });
+    }
+
+    else if(document.getElementById('gas-station-filter').checked) {
+        $.ajax({
+            url: '/gasStations',
+            type: 'GET',
+
+            success: function(response) {
+                var response = JSON.parse(response);
+                map.getSource('gasStations').setData(response);
+            },
+            error: function(error) {
+                console.log(error);
+            }
+        });
+    }
+    else {
+        map.getSource('gasStations').setData({
+                "type": "FeatureCollection",
+                "features": []
+            });
+        }
+}
+// events for draggable point
+function onMove(e) {
+    var coords = e.lngLat;
+    canvas.style.cursor = 'grabbing';
+    draggableGeoJSON.features[0].geometry.coordinates = [coords.lng, coords.lat];
+    map.getSource('point').setData(draggableGeoJSON);
+}
+
+function onUp(e) {
+    var coords = e.lngLat;
+    coordinates.style.display = 'block';
+    coordinates.innerHTML = 'Longitude: ' + coords.lng + '<br />Latitude: ' + coords.lat;
+    canvas.style.cursor = '';
+    map.off('mousemove', onMove);
+    map.off('touchmove', onMove);
+}
+
+    // text for gas station
+    map.on('click', 'gas-station', function (e) {
+        var coordinates = e.features[0].geometry.coordinates.slice();
+        var description = e.features[0].properties.title;
+        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+        }
+
+        new mapboxgl.Popup()
+            .setLngLat(coordinates)
+            .setHTML(description)
+            .addTo(map);
+    });
+
+    map.on('mouseenter', 'gas-station', function () {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+
+    map.on('mouseleave', 'gas-station', function () {
+        map.getCanvas().style.cursor = '';
+    });
+
+    // text for charging station
+    map.on('click', 'charging-station', function (e) {
+        var coordinates = e.features[0].geometry.coordinates.slice();
+        var description = e.features[0].properties.title;
+        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+        }
+
+        new mapboxgl.Popup()
+            .setLngLat(coordinates)
+            .setHTML(description)
+            .addTo(map);
+    });
+
+    map.on('mouseenter', 'charging-station', function () {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+
+    map.on('mouseleave', 'charging-station', function () {
+        map.getCanvas().style.cursor = '';
+    });
+</script>
+
+</body>
+</html>

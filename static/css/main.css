@@ -1,0 +1,58 @@
+body { 
+    margin:0; 
+    padding:0; 
+}
+
+#map { 
+    position:absolute; 
+    top:0; 
+    bottom:0; 
+    width:100%; 
+}
+
+.coordinates,  .stations {
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    position: absolute;
+    left: 10px;
+    padding:5px 10px;
+    margin: 0;
+    font-size: 11px;
+    line-height: 18px;
+    border-radius: 3px;
+    z-index: 10;
+}
+
+.stations {
+    font-size: 13px;
+    bottom: 90px;
+}
+
+.coordinates {
+    bottom: 30px;
+}
+.menu {
+    color: white;
+    display: flex;
+    flex-direction: column;
+    flex-flow: space-evenly;
+    align-items: stretch;
+    position: absolute;
+    height: 100%;
+    width: 15%;
+    background: rgba(0,0,0,0.8);
+}
+
+.item {
+    margin-bottom: 20px;
+    text-align: center;
+    align-self: stretch;
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.in-item {
+    width: 100%;
+    align-self: stretch;
+}
