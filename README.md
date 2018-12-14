@@ -20,20 +20,27 @@ Build a map-based application, which lets the user see geo-based data on a map a
 
 Fill in (either in English, or in Slovak):
  
-**Application description**: Aplikácia by mala pomôcť šoférom alebo ľudom, ktorí si potrebujú načerpať palivo a nevedia, kde presne sa nachádza. Keďže dáta z druhého datasetu sú z Ameriky, budem sa zameriavať v projekte na Ameriku. Je možné vytvoriť viacero scenárov:
+**Application description**: Aplikácia by mala pomôcť šoférom alebo ľudom, ktorí si potrebujú načerpať palivo a nevedia, kde presne sa nachádza. Keďže dáta z druhého datasetu sú z Ameriky, budem sa zameriavať v projekte na štát Colorado. 
 
--Nájsť najbližšiu benzínku
+Celá aplikácia sa skladá z troch častí a to databáza, kde mám uložené dva zdroje dát, ktoré som spomínal vyššie. Potom backend(FLASK), ktorý prijíma požiadavky z frontendu a zároveň spracováva a vytvára dopyty na databázu. Následne všetko konvertuje do formatu GEOJSON a odosiela na frontend. Frontend(MAPBOX-GL) spracováva a zobrazuje informácie cez formát geojson, filtruje a posiela requesty na backend.
 
--Benzínky v určitom okruhu
+Celkovo som pracoval s dátami na Mapboxe ako s klastrami, takže sa zobrazujú niektoré stanice až po priblížení. Na mape je pohyblivý bod, pomocou ktorého sa dajú vykonávať scenáre. Vytvoril som aj heatmapu, ktorá znázoruje hustotu benziniek na mape. Ikony na mape sú rozdelené podľa toho aké palivo je možné načerpať, teda palivo z ropy alebo na elektické palivo.
 
--Aký druh karty benzínka akceptuje
 
--Aké palivo je možné na benzínke natankovať
+Je možné vytvoriť viacero scenárov:
+ 
+- Nájsť najbližších 10 benziniek
 
--Aký druh nabíjania elektromotorov je možné na benzínke a aký charger používajú
+- Benzínky v okruhu 5 km
 
--Komu benzínka patrí
+- Filtrovanie podľa elektrickej benzinky a elektrického paliva
+
+- heatmapa benziniek
+
+- zobrazenie počtu benziniek a elektrických čerpacích staníc
+
+
 
 **Data source**: Openstreetmap.com, API na tankovacie stanice: https://developer.nrel.gov/docs/transportation/alt-fuel-stations-v1/
 
-**Technologies used**: POSTGIS, JAVA/PYTHON
+**Technologies used**: POSTGIS, PYTHON, MAPBOX-GL
